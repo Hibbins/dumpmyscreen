@@ -1,2 +1,2 @@
 # dumpmyscreen
-All those screenshots, will no longer be lost in time like tears in rain.
+All those screenshots, no longer lost in time like tears in rain.
