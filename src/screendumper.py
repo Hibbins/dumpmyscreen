@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import subprocess
 import re
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QPainter
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QPixmap, QPainter, QIcon
 from datetime import datetime
 import sys
 import os
@@ -19,8 +19,8 @@ config.read(config_path)
 # Get configuration values
 screenshot_folder = os.path.expanduser(config.get("DEFAULT", "SCREENSHOT_FOLDER"))
 custom_string = config.get("DEFAULT", "CUSTOM_STRING")
-listen_for_keystroke = config.getboolean("DEFAULT", "LISTEN_FOR_KEYSTROKE")
 trigger_key = config.get("DEFAULT", "TRIGGER_KEY")
+show_in_systray = config.getboolean("DEFAULT", "SHOW_IN_SYSTRAY")
 
 # Ensure screenshot folder exists
 os.makedirs(screenshot_folder, exist_ok=True)
@@ -105,11 +105,70 @@ class ScreenshotOverlay(QWidget):
         painter.drawRect(self.rect())
 
     def cleanup_and_exit(self):
-        # Remove the temporary full monitor screenshot file
-        if os.path.exists(self.full_monitor_path):
-            os.remove(self.full_monitor_path)
+        # Close the overlay first, then delete the background file after a short delay
         self.close()
-        QApplication.instance().quit()
+        
+        # Quit the application only if systray is disabled
+        if not show_in_systray:
+            QTimer.singleShot(500, QApplication.instance().quit)  # 100 ms delay before quitting
+        
+        # Delay the deletion of the full monitor screenshot to reduce flicker
+        if os.path.exists(self.full_monitor_path):
+            QTimer.singleShot(500, lambda: os.remove(self.full_monitor_path))  # 100 ms delay
+
+class ScreenshotApp(QApplication):
+    def __init__(self, sys_argv):
+        super().__init__(sys_argv)
+        self.tray_icon = None
+        if show_in_systray:
+            self.init_systray()
+
+    def init_systray(self):
+        # Create the system tray icon
+        self.tray_icon = QSystemTrayIcon(QIcon("./assets/icon.png"), self)
+
+        # Set up tray menu
+        tray_menu = QMenu()
+        start_action = QAction("Take Screenshot", self)
+        start_action.triggered.connect(self.take_screenshot)
+        tray_menu.addAction(start_action)
+        
+        # Add exit action to tray menu
+        exit_action = QAction("Exit", self)
+        exit_action.triggered.connect(self.exit_app)
+        tray_menu.addAction(exit_action)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
+    def take_screenshot(self):
+        print("Take screenshot function called.")
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        selected_area_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
+        full_monitor_path = os.path.join(screenshot_folder, "full_monitor_screenshot.png")
+        
+        # Start scrot in selection mode to let user select an area
+        result = subprocess.run(["scrot", "-s", selected_area_path])
+
+        if result.returncode == 0 and os.path.exists(selected_area_path):
+            # Get the active monitor geometry
+            monitor_geometry = get_active_monitor_geometry()
+            if monitor_geometry:
+                width, height, x_offset, y_offset = monitor_geometry
+                # Take a full monitor screenshot after selection
+                subprocess.run(["scrot", "-a", f"{x_offset},{y_offset},{width},{height}", full_monitor_path])
+
+                # Keep overlay window as an instance attribute to avoid garbage collection
+                print("Displaying ScreenshotOverlay with buttons.")
+                self.overlay_window = ScreenshotOverlay(full_monitor_path, selected_area_path)
+                self.overlay_window.show()
+
+    def exit_app(self):
+        # Hide the tray icon and quit the app
+        if self.tray_icon:
+            self.tray_icon.hide()
+        self.quit()
 
 def get_active_monitor_geometry():
     try:
@@ -129,14 +188,12 @@ def get_active_monitor_geometry():
             )
             
             if primary_monitor_geometry_match:
-                width, height, x_offset, y_offset = map(int, primary_monitor_geometry_match.groups())
-                return width, height, x_offset, y_offset
+                return map(int, primary_monitor_geometry_match.groups())
 
         # If no primary monitor, fall back to the first connected monitor
         first_connected_monitor_match = re.search(r"(\w+-\d+)\sconnected\s(\d+)x(\d+)\+(\d+)\+(\d+)", xrandr_output)
         if first_connected_monitor_match:
-            width, height, x_offset, y_offset = map(int, first_connected_monitor_match.groups()[1:])
-            return width, height, x_offset, y_offset
+            return map(int, first_connected_monitor_match.groups()[1:])
         
         # Log an error if no active monitor is detected
         print("Error: No active monitor detected.")
@@ -146,30 +203,9 @@ def get_active_monitor_geometry():
         print("Error: Failed to execute xrandr command.")
         return None
 
-def take_screenshot():
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    selected_area_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
-    full_monitor_path = os.path.join(screenshot_folder, "full_monitor_screenshot.png")
-    
-    # Start scrot in selection mode to let user select an area
-    result = subprocess.run(["scrot", "-s", selected_area_path])
-
-    if result.returncode == 0 and os.path.exists(selected_area_path):
-        
-        # Get the active monitor geometry
-        monitor_geometry = get_active_monitor_geometry()
-        if monitor_geometry:
-            width, height, x_offset, y_offset = monitor_geometry
-            # Take a full monitor screenshot after selection
-            subprocess.run(["scrot", "-a", f"{x_offset},{y_offset},{width},{height}", full_monitor_path])
-            
-            # Launch the overlay window with the full monitor screenshot as background and buttons
-            app = QApplication(sys.argv)
-            overlay_window = ScreenshotOverlay(full_monitor_path, selected_area_path)
-            overlay_window.show()
-            sys.exit(app.exec_())
-    else:
-        print("Screenshot canceled or no area selected.")
-
 if __name__ == "__main__":
-    take_screenshot()
+    app = ScreenshotApp(sys.argv)
+    if not show_in_systray:
+        app.take_screenshot()  # Directly start screenshot if systray is disabled
+    app.setQuitOnLastWindowClosed(False)  # Keeps app running if systray is active
+    sys.exit(app.exec_())
