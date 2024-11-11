@@ -2,7 +2,7 @@
 import subprocess
 import re
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QPainter, QIcon
 from datetime import datetime
 import sys
@@ -34,7 +34,7 @@ class ScreenshotOverlay(QWidget):
         self.initUI()
 
     def initUI(self):
-        # Set dialog to modal, frameless, translucent, and full-screen on top
+        # Set window to frameless, translucent, and full-screen on top
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setWindowState(Qt.WindowFullScreen)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -43,7 +43,6 @@ class ScreenshotOverlay(QWidget):
         self.activateWindow()
         self.raise_()
         self.setFocus()
-        print("Overlay window initialized and set to active.")  # Debugging
 
         # Load the full monitor screenshot into a pixmap for display
         self.background = QPixmap(self.full_monitor_path)
@@ -68,25 +67,21 @@ class ScreenshotOverlay(QWidget):
 
         # Add the preview to the layout
         self.layout.addWidget(self.preview_label)
-        print("Preview label added.")
 
     def add_action_buttons(self):
         # Copy to Clipboard button
         btn_copy = QPushButton("Copy to Clipboard", self)
         btn_copy.clicked.connect(self.copy_to_clipboard)
-        print("Copy button created and connected.")
         
         # Save to folder button
         btn_save = QPushButton("Save to Folder", self)
         btn_save.clicked.connect(self.save_to_folder)
-        print("Save button created and connected.")
 
         # Add buttons to layout
         self.layout.addWidget(btn_copy)
         self.layout.addWidget(btn_save)
 
     def copy_to_clipboard(self):
-        print("copy_to_clipboard method called")
         if custom_string:
             # If CUSTOM_STRING is populated, copy string and screenshot path to clipboard
             clipboard_content = f"{custom_string} {self.selected_area_path}"
@@ -99,11 +94,9 @@ class ScreenshotOverlay(QWidget):
         self.cleanup_and_exit()
 
     def save_to_folder(self):
-        print("save_to_folder method called")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
         QPixmap(self.selected_area_path).save(save_path)
-        print(f"Selected area saved to {save_path}")
         self.cleanup_and_exit()
 
     def paintEvent(self, event):
@@ -154,8 +147,6 @@ class ScreenshotApp(QApplication):
         self.tray_icon.show()
 
     def take_screenshot(self):
-        print("Take screenshot function called.")
-        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         selected_area_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
         full_monitor_path = os.path.join(screenshot_folder, "full_monitor_screenshot.png")
@@ -172,7 +163,6 @@ class ScreenshotApp(QApplication):
                 subprocess.run(["scrot", "-a", f"{x_offset},{y_offset},{width},{height}", full_monitor_path])
 
                 # Show the overlay window with buttons
-                print("Displaying ScreenshotOverlay with buttons.")
                 self.overlay_window = ScreenshotOverlay(full_monitor_path, selected_area_path, exit_after_action=(not show_in_systray))
                 self.overlay_window.show()
 
@@ -218,14 +208,11 @@ def get_active_monitor_geometry():
 # Main block
 if __name__ == "__main__":
     if "--screenshot" in sys.argv:
-        print("Running in one-shot screenshot mode without system tray.")  # Debugging
         app = ScreenshotApp(sys.argv, systray_enabled=False)
         app.take_screenshot()
         app.setQuitOnLastWindowClosed(True)
         sys.exit(app.exec_())
     else:
-        print("Starting main application instance.")
         app = ScreenshotApp(sys.argv)
         app.setQuitOnLastWindowClosed(False)
-        print("Entering app.exec_()")
         sys.exit(app.exec_())
