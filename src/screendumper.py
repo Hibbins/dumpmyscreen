@@ -26,21 +26,28 @@ show_in_systray = config.getboolean("DEFAULT", "SHOW_IN_SYSTRAY")
 os.makedirs(screenshot_folder, exist_ok=True)
 
 class ScreenshotOverlay(QWidget):
-    def __init__(self, full_monitor_path, selected_area_path):
+    def __init__(self, full_monitor_path, selected_area_path, exit_after_action=False):
         super().__init__()
         self.full_monitor_path = full_monitor_path
         self.selected_area_path = selected_area_path
+        self.exit_after_action = exit_after_action
         self.initUI()
 
     def initUI(self):
-        # Set window to frameless, translucent, and full-screen on top
+        # Set dialog to modal, frameless, translucent, and full-screen on top
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setWindowState(Qt.WindowFullScreen)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        # Explicitly request focus
+        self.activateWindow()
+        self.raise_()
+        self.setFocus()
+        print("Overlay window initialized and set to active.")  # Debugging
 
         # Load the full monitor screenshot into a pixmap for display
         self.background = QPixmap(self.full_monitor_path)
-        
+
         # Main layout for the preview and buttons
         self.layout = QVBoxLayout()
         self.layout.setAlignment(Qt.AlignCenter)
@@ -50,7 +57,7 @@ class ScreenshotOverlay(QWidget):
 
         # Add action buttons below the preview
         self.add_action_buttons()
-        
+
         self.setLayout(self.layout)
 
     def add_selected_area_preview(self):
@@ -61,21 +68,25 @@ class ScreenshotOverlay(QWidget):
 
         # Add the preview to the layout
         self.layout.addWidget(self.preview_label)
+        print("Preview label added.")
 
     def add_action_buttons(self):
         # Copy to Clipboard button
         btn_copy = QPushButton("Copy to Clipboard", self)
         btn_copy.clicked.connect(self.copy_to_clipboard)
+        print("Copy button created and connected.")
         
         # Save to folder button
         btn_save = QPushButton("Save to Folder", self)
         btn_save.clicked.connect(self.save_to_folder)
+        print("Save button created and connected.")
 
         # Add buttons to layout
         self.layout.addWidget(btn_copy)
         self.layout.addWidget(btn_save)
 
     def copy_to_clipboard(self):
+        print("copy_to_clipboard method called")
         if custom_string:
             # If CUSTOM_STRING is populated, copy string and screenshot path to clipboard
             clipboard_content = f"{custom_string} {self.selected_area_path}"
@@ -88,6 +99,7 @@ class ScreenshotOverlay(QWidget):
         self.cleanup_and_exit()
 
     def save_to_folder(self):
+        print("save_to_folder method called")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
         QPixmap(self.selected_area_path).save(save_path)
@@ -108,19 +120,19 @@ class ScreenshotOverlay(QWidget):
         # Close the overlay first, then delete the background file after a short delay
         self.close()
         
-        # Quit the application only if systray is disabled
-        if not show_in_systray:
-            QTimer.singleShot(500, QApplication.instance().quit)  # 100 ms delay before quitting
-        
+        # Quit the application immediately if this is a one-shot instance
+        if self.exit_after_action:
+            QApplication.instance().quit
+
         # Delay the deletion of the full monitor screenshot to reduce flicker
         if os.path.exists(self.full_monitor_path):
-            QTimer.singleShot(500, lambda: os.remove(self.full_monitor_path))  # 100 ms delay
+            os.remove(self.full_monitor_path)
 
 class ScreenshotApp(QApplication):
-    def __init__(self, sys_argv):
+    def __init__(self, sys_argv, systray_enabled=True):
         super().__init__(sys_argv)
         self.tray_icon = None
-        if show_in_systray:
+        if systray_enabled and show_in_systray:
             self.init_systray()
 
     def init_systray(self):
@@ -159,9 +171,9 @@ class ScreenshotApp(QApplication):
                 # Take a full monitor screenshot after selection
                 subprocess.run(["scrot", "-a", f"{x_offset},{y_offset},{width},{height}", full_monitor_path])
 
-                # Keep overlay window as an instance attribute to avoid garbage collection
+                # Show the overlay window with buttons
                 print("Displaying ScreenshotOverlay with buttons.")
-                self.overlay_window = ScreenshotOverlay(full_monitor_path, selected_area_path)
+                self.overlay_window = ScreenshotOverlay(full_monitor_path, selected_area_path, exit_after_action=(not show_in_systray))
                 self.overlay_window.show()
 
     def exit_app(self):
@@ -203,9 +215,17 @@ def get_active_monitor_geometry():
         print("Error: Failed to execute xrandr command.")
         return None
 
+# Main block
 if __name__ == "__main__":
-    app = ScreenshotApp(sys.argv)
-    if not show_in_systray:
-        app.take_screenshot()  # Directly start screenshot if systray is disabled
-    app.setQuitOnLastWindowClosed(False)  # Keeps app running if systray is active
-    sys.exit(app.exec_())
+    if "--screenshot" in sys.argv:
+        print("Running in one-shot screenshot mode without system tray.")  # Debugging
+        app = ScreenshotApp(sys.argv, systray_enabled=False)
+        app.take_screenshot()
+        app.setQuitOnLastWindowClosed(True)
+        sys.exit(app.exec_())
+    else:
+        print("Starting main application instance.")
+        app = ScreenshotApp(sys.argv)
+        app.setQuitOnLastWindowClosed(False)
+        print("Entering app.exec_()")
+        sys.exit(app.exec_())
