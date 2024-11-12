@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import subprocess
 import re
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction, QLabel
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QPainter, QIcon
+from PyQt5.QtGui import QPixmap, QPainter, QIcon, QKeySequence, QColor
 from datetime import datetime
 import sys
 import os
@@ -72,14 +72,32 @@ class ScreenshotOverlay(QWidget):
         # Copy to Clipboard button
         btn_copy = QPushButton("Copy to Clipboard", self)
         btn_copy.clicked.connect(self.copy_to_clipboard)
-        
-        # Save to folder button
+        self.layout.addWidget(btn_copy)
+
+        # Shortcut label for "Copy to Clipboard"
+        label_copy = OutlinedLabel("CTRL + C", self)
+        label_copy.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(label_copy)
+
+        # Save to Folder button
         btn_save = QPushButton("Save to Folder", self)
         btn_save.clicked.connect(self.save_to_folder)
-
-        # Add buttons to layout
-        self.layout.addWidget(btn_copy)
         self.layout.addWidget(btn_save)
+
+        # Shortcut label for "Save to Folder"
+        label_save = OutlinedLabel("CTRL + S", self)
+        label_save.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(label_save)
+
+    def keyPressEvent(self, event):
+        # Detect keyboard shortcuts and trigger the corresponding action
+        if event.matches(QKeySequence.Copy):  # CTRL + C
+            self.copy_to_clipboard()
+        elif event.matches(QKeySequence.Save):  # CTRL + S
+            self.save_to_folder()
+        else:
+            # Call parent event handler for any unhandled keys
+            super().keyPressEvent(event)
 
     def copy_to_clipboard(self):
         if custom_string:
@@ -171,6 +189,28 @@ class ScreenshotApp(QApplication):
         if self.tray_icon:
             self.tray_icon.hide()
         self.quit()
+
+class OutlinedLabel(QLabel):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.text = text
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # Define text color and outline color
+        outline_color = QColor(Qt.black)
+        text_color = QColor(Qt.white)
+
+        # Draw the outline by drawing the text multiple times slightly offset
+        painter.setPen(outline_color)
+        for dx, dy in [(-1, -1), (-1, 1), (1, -1), (1, 1)]:
+            painter.drawText(self.rect().adjusted(dx, dy, dx, dy), Qt.AlignCenter, self.text)
+
+        # Draw the main text in the center
+        painter.setPen(text_color)
+        painter.drawText(self.rect(), Qt.AlignCenter, self.text)
 
 def get_active_monitor_geometry():
     try:
