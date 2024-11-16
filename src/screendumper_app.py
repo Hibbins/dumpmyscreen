@@ -9,7 +9,7 @@ from utils import config
 # Configuration values and paths
 screenshot_folder = os.path.expanduser(config.get("DEFAULT", "SCREENSHOT_FOLDER"))
 show_in_systray = config.getboolean("DEFAULT", "SHOW_IN_SYSTRAY")
-selected_region_coordinates = os.path.expanduser("DEFAULT", "SELECTED_REGION_COORDINATES")
+selected_region_coordinates = config.get("DEFAULT", "SELECTED_REGION_COORDINATES", fallback="")
 
 class ScreendumperApp(QApplication):
     def __init__(self, sys_argv, systray_enabled=True):
@@ -45,14 +45,14 @@ class ScreendumperApp(QApplication):
 
     def save_coordinates(self, x, y, w, h):
         """Save the selected region coordinates to the config file."""
-        with open(selected_region_coordinates, "w") as selected_region_coordinates:
-            selected_region_coordinates.write(f"{x},{y},{w},{h}")
+        with open(selected_region_coordinates, "w") as coordinates:
+            coordinates.write(f"{x},{y},{w},{h}")
 
     def load_coordinates(self):
         """Load the coordinates from the config file."""
         try:
-            with open(selected_region_coordinates, "r") as selected_region_coordinates:
-                x, y, w, h = selected_region_coordinates.read().strip().split(",")
+            with open(selected_region_coordinates, "r") as coordinates:
+                x, y, w, h = coordinates.read().strip().split(",")
                 return x, y, w, h
         except (FileNotFoundError, ValueError):
             return None
