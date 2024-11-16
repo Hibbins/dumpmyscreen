@@ -87,6 +87,9 @@ class ScreendumperOverlay(QWidget):
             self.copy_image_to_clipboard(self.selected_pixmap)
         elif event.matches(QKeySequence.Save):  # CTRL + S
             self.save_to_folder()
+        elif event.key() == Qt.Key_Escape:  # Pressing ESC key exits the app
+            print("Escape key pressed. Exiting overlay.")
+            self.cleanup_and_exit()
         else:
             # Call parent event handler for any unhandled keys
             super().keyPressEvent(event)
