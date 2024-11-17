@@ -80,7 +80,7 @@ class ScreendumperApp(QApplication):
             if result.returncode == 0 and os.path.exists(selected_area_path):
 
                 if self.no_compositor_mode:
-                    # Full monitor pixmap only in compositor mode
+                    # Full monitor pixmap only in no compositor mode
                     screen = QGuiApplication.primaryScreen()
                     full_monitor_pixmap = screen.grabWindow(0)
                 else:
