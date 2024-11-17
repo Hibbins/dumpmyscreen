@@ -82,7 +82,7 @@ class ScreendumperOverlay(QWidget):
     def keyPressEvent(self, event):
         # Detect keyboard shortcuts and trigger the corresponding action
         if event.matches(QKeySequence.Copy):  # CTRL + C
-            self.copy_image_to_clipboard(self.selected_pixmap)
+            self.copy_image_to_clipboard()
         elif event.matches(QKeySequence.Save):  # CTRL + S
             self.save_to_folder()
         elif event.key() == Qt.Key_Escape:  # Pressing ESC key exits the app
@@ -95,6 +95,10 @@ class ScreendumperOverlay(QWidget):
     def copy_image_to_clipboard(self):
         clipboard = QGuiApplication.clipboard()
         clipboard.setPixmap(self.selected_pixmap)  # Use the QPixmap directly
+
+        # Remove file from disk
+        if os.path.exists(self.selected_area_path):
+            os.remove(self.selected_area_path)
         # Close the overlay or exit if this is a single-use instance
         self.cleanup_and_exit()
 
@@ -114,10 +118,6 @@ class ScreendumperOverlay(QWidget):
             clipboard_content = self.selected_area_path or "No screenshot path available."
             subprocess.run(["xclip", "-selection", "clipboard"], input=clipboard_content, text=True)
             print("Warning: CUSTOM_STRING is not defined. Only screenshot path will be copied.")
-
-        # Remove file from disk
-        if os.path.exists(self.selected_area_path):
-                os.remove(self.selected_area_path)
 
         self.cleanup_and_exit()
 
