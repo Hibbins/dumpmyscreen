@@ -1,13 +1,11 @@
 from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QPainter, QKeySequence, QGuiApplication
+from PyQt5.QtGui import QPainter, QKeySequence, QGuiApplication
 from draw_button_labels import DrawButtonLabels
-from utils import config, screenshot_folder
+from utils import screenshot_folder, custom_string
 import subprocess
 import os
 from datetime import datetime
-
-custom_string = config.get("DEFAULT", "CUSTOM_STRING")
 
 class ScreendumperOverlay(QWidget):
     def __init__(self, full_monitor_pixmap, selected_pixmap, selected_area_path, exit_after_action=False):

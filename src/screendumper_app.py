@@ -4,12 +4,7 @@ from datetime import datetime
 import os
 import subprocess
 from screendumper_overlay import ScreendumperOverlay
-from utils import config
-
-# Configuration values and paths
-screenshot_folder = os.path.expanduser(config.get("DEFAULT", "SCREENSHOT_FOLDER"))
-show_in_systray = config.getboolean("DEFAULT", "SHOW_IN_SYSTRAY")
-selected_region_coordinates = config.get("DEFAULT", "SELECTED_REGION_COORDINATES", fallback="")
+from utils import screenshot_folder, show_in_systray, selected_region_coordinates
 
 class ScreendumperApp(QApplication):
     def __init__(self, sys_argv, systray_enabled=True):
