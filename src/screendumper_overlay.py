@@ -129,8 +129,10 @@ class ScreendumperOverlay(QWidget):
 
     def paintEvent(self, _event):
         painter = QPainter(self)
-        # Draw the full monitor screenshot from in-memory pixmap as background
-        painter.drawPixmap(self.rect(), self.full_monitor_pixmap)
+
+        if self.full_monitor_pixmap:
+            # Draw the full monitor screenshot from in-memory pixmap as background
+            painter.drawPixmap(self.rect(), self.full_monitor_pixmap)
         
         # Draw the dimmed overlay on top
         painter.setBrush(Qt.black)

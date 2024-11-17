@@ -4,12 +4,13 @@ from datetime import datetime
 import os
 import subprocess
 from screendumper_overlay import ScreendumperOverlay
-from utils import screenshot_folder, show_in_systray, selected_region_coordinates
+from utils import screenshot_folder, show_in_systray, selected_region_coordinates, no_compositor_mode
 
 class ScreendumperApp(QApplication):
     def __init__(self, sys_argv, systray_enabled=True):
         super().__init__(sys_argv)
         self.tray_icon = None
+        self.no_compositor_mode = no_compositor_mode
         if systray_enabled and show_in_systray:
             self.init_systray()
 
@@ -77,9 +78,13 @@ class ScreendumperApp(QApplication):
             result = subprocess.run(["scrot", "-a", ",".join(coords), selected_area_path])
 
             if result.returncode == 0 and os.path.exists(selected_area_path):
-                
-                screen = QGuiApplication.primaryScreen()
-                full_monitor_pixmap = screen.grabWindow(0)
+
+                if self.no_compositor_mode:
+                    # Full monitor pixmap only in compositor mode
+                    screen = QGuiApplication.primaryScreen()
+                    full_monitor_pixmap = screen.grabWindow(0)
+                else:
+                    full_monitor_pixmap = None
 
                 # Load the selected area QPixmap for clipboard use
                 selected_area_pixmap = QPixmap(selected_area_path)
