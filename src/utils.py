@@ -1,18 +1,46 @@
 import configparser
 import os
 
-# Configuration file path and loading
-config_path = os.path.expanduser("~/.config/dumpmyscreen/config.conf")
+# Configuration file path
+config_dir = os.path.expanduser("~/.config/dumpmyscreen")
+config_path = os.path.join(config_dir, "config.conf")
+
+# Path to screenshot directory
+screenshot_dir = os.path.expanduser("~/.config/dumpmyscreen/screenshots")
+
+# Ensure the configuration & screenshot directory exists
+os.makedirs(config_dir, exist_ok=True)
+os.makedirs(screenshot_dir, exist_ok=True)
+
+# Initialize the ConfigParser
 config = configparser.ConfigParser()
 config.read(config_path)
 
-# Get the screenshot folder path
-screenshot_folder = os.path.expanduser(config.get("DEFAULT", "SCREENSHOT_FOLDER"))
-# Get the custom string to be appended to clipboard
-custom_string = config.get("DEFAULT", "CUSTOM_STRING")
-# Get the boolean value that determines if systray is displayed
-show_in_systray = config.getboolean("DEFAULT", "SHOW_IN_SYSTRAY")
-# Get the region coordinates from the latest selection
-selected_region_coordinates = config.get("DEFAULT", "SELECTED_REGION_COORDINATES", fallback="")
-# Get the boolean that determines wheter to run no compositor mode or not
-no_compositor_mode = config.getboolean("DEFAULT", "NO_COMPOSITOR_MODE")
+# Check if the config file exists, if it doesn't, create it
+if not os.path.exists(config_path):
+    # Manually write the configuration
+    with open(config_path, "w") as configfile:
+        configfile.write("""\
+            [DEFAULT]
+            Screenshotfolder = ~/.config/dumpmyscreen/screenshots
+            CustomString = ""
+            ShowInSystray = true
+            SelectedRegionCoordinates = ""
+            NoCompositorMode = false
+        """)
+
+# Utility functions
+def get_config_value(key):
+    """Fetch a configuration value by key."""
+    try:
+        return config.get("DEFAULT", key)
+    except configparser.NoOptionError:
+        print(f"Key {key} not found in config.")
+        return None
+
+
+def update_config(key, value):
+    """Update a configuration value and write it to the config file."""
+    config.set("DEFAULT", key, value)
+    with open(config_path, "w") as configfile:
+        config.write(configfile)
