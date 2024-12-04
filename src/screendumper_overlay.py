@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QApplication, QVBoxLayout, QLabel, QPushBut
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QKeySequence, QGuiApplication
 from draw_button_labels import DrawButtonLabels
-from utils import screenshot_folder, custom_string
+from utils import get_config_value
 import subprocess
 import os
 from datetime import datetime
@@ -10,6 +10,8 @@ from datetime import datetime
 class ScreendumperOverlay(QWidget):
     def __init__(self, full_monitor_pixmap, selected_pixmap, selected_area_path, exit_after_action=False):
         super().__init__()
+        self.screenshot_folder = os.path.expanduser(get_config_value("ScreenshotFolder"))
+        self.custom_string = get_config_value("CustomString")
         self.full_monitor_pixmap = full_monitor_pixmap  # full screen pixmap
         self.selected_pixmap = selected_pixmap  # selected area pixmap
         self.selected_area_path = selected_area_path  # For file path usage in custom string & save to folder
@@ -103,15 +105,15 @@ class ScreendumperOverlay(QWidget):
         self.cleanup_and_exit()
 
     def copy_custom_string_to_clipboard(self):
-        if custom_string:
+        if self.custom_string:
             # Save selected_pixmap to file only if selected_area_path is empty
             if not self.selected_area_path:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                self.selected_area_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
+                self.selected_area_path = os.path.join(self.screenshot_folder, f"screenshot_{timestamp}.png")
                 self.selected_pixmap.save(self.selected_area_path)
 
             # Prepare clipboard content with custom string and file path
-            clipboard_content = f"{custom_string} {self.selected_area_path}"
+            clipboard_content = f"{self.custom_string} {self.selected_area_path}"
             subprocess.run(["xclip", "-selection", "clipboard"], input=clipboard_content, text=True)
         else:
             # If CUSTOM_STRING is not populated, copy only the path (or notify if path is empty)
@@ -123,7 +125,7 @@ class ScreendumperOverlay(QWidget):
 
     def save_to_folder(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
+        save_path = os.path.join(self.screenshot_folder, f"screenshot_{timestamp}.png")
         self.selected_pixmap.save(save_path)  # Save the selected area directly from pixmap
         self.cleanup_and_exit()
 

@@ -4,14 +4,17 @@ from datetime import datetime
 import os
 import subprocess
 from screendumper_overlay import ScreendumperOverlay
-from utils import screenshot_folder, show_in_systray, selected_region_coordinates, no_compositor_mode
+from utils import get_config_value, update_config
 
 class ScreendumperApp(QApplication):
     def __init__(self, sys_argv, systray_enabled=True):
         super().__init__(sys_argv)
+        self.screenshot_folder = os.path.expanduser(get_config_value("ScreenshotFolder"))
+        self.show_in_systray = get_config_value("ShowInSystray")
+        self.selected_region_coordinates = get_config_value("SelectedRegionCoordinates")
+        self.no_compositor_mode = get_config_value("NoCompositorMode")
         self.tray_icon = None
-        self.no_compositor_mode = no_compositor_mode
-        if systray_enabled and show_in_systray:
+        if systray_enabled and self.show_in_systray:
             self.init_systray()
 
     def init_systray(self):
@@ -41,16 +44,19 @@ class ScreendumperApp(QApplication):
 
     def save_coordinates(self, x, y, w, h):
         """Save the selected region coordinates to the config file."""
-        with open(selected_region_coordinates, "w") as coordinates:
-            coordinates.write(f"{x},{y},{w},{h}")
+        update_config("SelectedRegionCoordinates", f"{x},{y},{w},{h}")
 
     def load_coordinates(self):
-        """Load the coordinates from the config file."""
+        """Load the coordinates from the configuration value."""
         try:
-            with open(selected_region_coordinates, "r") as coordinates:
-                x, y, w, h = coordinates.read().strip().split(",")
+            if self.selected_region_coordinates:
+                x, y, w, h = self.selected_region_coordinates.strip().split(",")
                 return x, y, w, h
-        except (FileNotFoundError, ValueError):
+            else:
+                print("No coordinates found in the config.")
+                return None
+        except ValueError:
+            print("Invalid coordinates format in the config.")
             return None
 
     def get_selection_coordinates(self):
@@ -68,7 +74,7 @@ class ScreendumperApp(QApplication):
 
     def take_screenshot(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        selected_area_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
+        selected_area_path = os.path.join(self.screenshot_folder, f"screenshot_{timestamp}.png")
         
         # Use `slop` to get the selection coordinates
         coords = self.get_selection_coordinates()
@@ -90,7 +96,7 @@ class ScreendumperApp(QApplication):
                 selected_area_pixmap = QPixmap(selected_area_path)
 
                 # Display the overlay window, passing both the pixmap and the path
-                self.overlay_window = ScreendumperOverlay(full_monitor_pixmap, selected_area_pixmap, selected_area_path, exit_after_action=(not show_in_systray))
+                self.overlay_window = ScreendumperOverlay(full_monitor_pixmap, selected_area_pixmap, selected_area_path, exit_after_action=(not self.show_in_systray))
                 self.overlay_window.show()
 
     def take_screenshot_with_previous_region(self):
@@ -101,7 +107,7 @@ class ScreendumperApp(QApplication):
             return
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        selected_area_path = os.path.join(screenshot_folder, f"screenshot_{timestamp}.png")
+        selected_area_path = os.path.join(self.screenshot_folder, f"screenshot_{timestamp}.png")
         
         # Use saved coordinates with `scrot`
         result = subprocess.run(["scrot", "-a", ",".join(coords), selected_area_path])
@@ -115,7 +121,7 @@ class ScreendumperApp(QApplication):
             selected_area_pixmap = QPixmap(selected_area_path)
 
             # Display the overlay window, passing both the pixmap and the screenshot path
-            self.overlay_window = ScreendumperOverlay(full_monitor_pixmap, selected_area_pixmap, selected_area_path, exit_after_action=(not show_in_systray))
+            self.overlay_window = ScreendumperOverlay(full_monitor_pixmap, selected_area_pixmap, selected_area_path, exit_after_action=(not self.show_in_systray))
             self.overlay_window.show()
 
     def exit_app(self):
