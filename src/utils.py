@@ -6,7 +6,7 @@ config_dir = os.path.expanduser("~/.config/dumpmyscreen")
 config_path = os.path.join(config_dir, "config.conf")
 
 # Path to screenshot directory
-screenshot_dir = os.path.expanduser("~/.config/dumpmyscreen/screenshots")
+screenshot_dir = os.path.join(config_dir, "screenshots")
 
 # Ensure the configuration & screenshot directory exists
 os.makedirs(config_dir, exist_ok=True)
