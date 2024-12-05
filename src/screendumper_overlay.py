@@ -98,11 +98,8 @@ class ScreendumperOverlay(QWidget):
         clipboard = QGuiApplication.clipboard()
         clipboard.setPixmap(self.selected_pixmap)  # Use the QPixmap directly
 
-        # Remove file from disk
-        if os.path.exists(self.selected_area_path):
-            os.remove(self.selected_area_path)
         # Close the overlay or exit if this is a single-use instance
-        self.cleanup_and_exit()
+        self.cleanup_and_exit(remove_file=True)
 
     def copy_custom_string_to_clipboard(self):
         if self.custom_string:
@@ -126,8 +123,11 @@ class ScreendumperOverlay(QWidget):
     def save_to_folder(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = os.path.join(self.screenshot_folder, f"screenshot_{timestamp}.png")
+
         self.selected_pixmap.save(save_path)  # Save the selected area directly from pixmap
-        self.cleanup_and_exit()
+
+        if self.selected_area_path != save_path:
+            self.cleanup_and_exit(remove_file=True)
 
     def paintEvent(self, _event):
         painter = QPainter(self)
@@ -141,9 +141,13 @@ class ScreendumperOverlay(QWidget):
         painter.setOpacity(0.3)
         painter.drawRect(self.rect())
 
-    def cleanup_and_exit(self):
+    def cleanup_and_exit(self, remove_file=False):
         # Close the overlay first
         self.close()
+
+        # Remove file from disk
+        if os.path.exists(self.selected_area_path) and remove_file:
+            os.remove(self.selected_area_path)
         
         # Quit the application immediately if this is a one-shot instance
         if self.exit_after_action:
