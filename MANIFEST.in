@@ -1,0 +1,3 @@
+include assets/*.desktop
+include assets/*.png
+include LICENSE
