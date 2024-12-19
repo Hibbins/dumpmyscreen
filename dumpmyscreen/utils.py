@@ -8,10 +8,6 @@ config_path = os.path.join(config_dir, "config.conf")
 # Path to screenshot directory
 screenshot_dir = os.path.join(config_dir, "screenshots")
 
-# Ensure the configuration & screenshot directory exists
-os.makedirs(config_dir, exist_ok=True)
-os.makedirs(screenshot_dir, exist_ok=True)
-
 # Initialize the ConfigParser
 config = configparser.ConfigParser()
 config.read(config_path)

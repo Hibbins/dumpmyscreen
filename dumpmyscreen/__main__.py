@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 import sys
+import os
 from .screendumper_app import ScreendumperApp
+
+# Configuration directory
+config_dir = os.path.expanduser("~/.config/dumpmyscreen")
+
+# Path to screenshot directory
+screenshot_dir = os.path.join(config_dir, "screenshots")
+
+# Ensure the configuration & screenshot directory exists
+os.makedirs(config_dir, exist_ok=True)
+os.makedirs(screenshot_dir, exist_ok=True)
 
 def main():
     """Entry point for the application."""
