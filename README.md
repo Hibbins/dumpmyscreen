@@ -86,19 +86,19 @@ You can execute the application using flags, currently there is only one flag, b
 
 See the [Flags](#flags) section for further information and examples on how to use it.
 
-## Options to Save or Copy File
+### Options to Save or Copy File
 
-### Image to Clipboard
+#### Image to Clipboard
 Saves the image to clipboard, you can then simply paste it into any application that can handle images directly from clipboard.
 
-### Save to Folder
+#### Save to Folder
 This option saves the screenshot to the directory chosen in the configuration, more info on screenshot folder can be found here [Screenshot folder](#screenshot-folder)
 
-### Custom to Clipboard
+#### Custom to Clipboard
 
-## Flags
+### Flags
 
-### Screenshot
+#### Screenshot
 The screenshot flag can be used to trigger the "Take screenshot" function directly. This can be useful if you want to take a screenshot using a script or for example bind it to a key in your Window Manager.
 
 Usage:
